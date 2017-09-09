@@ -80,10 +80,8 @@ function connect() {
 
 function send() {
   const { value } = document.getElementById("message");
+  Object.values(state.connections).forEach(c => c.send({ type: "message", content: value }));
   addChatMessage("you: " + value);
-  connections.forEach(conn => {
-    conn.send({ type: "message", content: value });
-  });
 }
 
 // Returns whether peer already existed
