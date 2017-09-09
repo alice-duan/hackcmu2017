@@ -1,0 +1,16 @@
+{
+  "name": "hackcmu2017",
+  "version": "1.0.0",
+  "description": "mediasync",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.15.4",
+    "peerjs": "^0.3.14"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
