@@ -5,7 +5,8 @@ var peer = new Peer({ key: "2nnnwv66dinhr529" });
 const state = {
   connections: {},
   queue: [],
-  initialized: false
+  initialized: false,
+  waiting: false, // if we are currently waiting for confirmations to play next thing in queue
 };
 console.log("state:", state);
 
@@ -38,18 +39,22 @@ const messageHandler = {
   },
   queueNext(message) {
     // when current media is over
-    state.queue.pop();
+    const next = state.queue.pop();
+
+    if (next.confirmed !== Object.keys(state.connections).length) {
+      addChatMessage("Waiting for people to accept...");
+      state.waiting = true;
+    }
   },
   queueAdd(message) {
     state.queue.push(message.content);
-    addChatMessage(message.origin + " added " + message.content.name + " to the queue");
+    addChatMessage(message.origin + " added " + message.content.name + " to the queue. You may accept this if you have the file.");
     if (message.content.type === "file") {
-      // TODO: trigger open file prompt
+      // TODO: document.getElementById("file-response-modal").classList.add("show");
     }
     addQueueRow(message.content);
   },
   queueRemove(message) {
-    // TODO: maybe allow for race conditions and just send index
     const index = state.queue.findIndex(elem => elem.name === message.content);
 
     if (state.queue[index]) {
@@ -57,13 +62,46 @@ const messageHandler = {
       state.queue.splice(index, 1);
     }
   },
-  queueReject(message) {},
+  queueAccept(message) {
+    addChatMessage(message.origin + " accepted adding " + message.content.name + " to the queue");
+
+    const index = state.queue.findIndex(elem => elem.name === message.content.name);
+    if (state.queue[index]) {
+      state.queue[index].confirmed += 1;
+
+      if (state.queue[index].confirmed === Object.keys(state.connections).length) {
+        state.waiting = false;
+      }
+    }
+  },
+  queueReject(message) {
+    addChatMessage(message.origin + " rejected adding " + message.content.name + " to the queue");
+
+    const index = state.queue.findIndex(elem => elem.name === message.content.name);
+    if (state.queue[index]) {
+      state.queue.splice(, 1);
+    }
+    state.waiting = false;
+
+    addChatMessage("Moving on");
+  },
   chatMessage(message) {
     addChatMessage(message.origin + ": " + message.content);
   },
-  play(message) {},
-  pause(message) {},
-  seek(message) {}
+  play(message) {
+    addChatMessage(message.origin + " resumed");
+    state.currentMedia.currentTime = message.content.currentTime;
+    state.currentMedia.play();
+  },
+  pause(message) {
+    addChatMessage(message.origin + " paused");
+    state.currentMedia.currentTime = message.content.currentTime;
+    state.currentMedia.pause();
+  },
+  seek(message) {
+    addChatMessage(message.origin + " changed the time to " + message.content.time);
+    state.currentMedia.currentTime = message.content.time;
+  }
 };
 
 peer.on("connection", conn => {
@@ -84,6 +122,8 @@ peer.on("connection", conn => {
           connections: Object.keys(state.connections)
         }
       });
+
+      // TODO: send queue and send waiting
     }, 500);
   }
 
@@ -145,7 +185,7 @@ function play() {
     currentTime: state.currentMedia.currentTime
   };
   messageAllPeers("play", content);
-  messageHandler.play(content);
+  addChatMessage("you played");
 }
 
 function pause() {
@@ -153,21 +193,20 @@ function pause() {
     currentTime: state.currentMedia.currentTime
   };
   messageAllPeers("pause", content);
-  messageHandler.pause(content);
+  addChatMessage("you paused");
 }
 
 function ended() {
   messageAllPeers("queueNext");
-  messageHandler.queueNext(content);
+  messageHandler.queueNext();
 }
 
 function seek() {
   const content = {
     time: state.currentMedia.currentTime,
-    paused: state.currentMedia.playing
   };
   messageAllPeers("seek", content);
-  messageHandler.seek(content);
+  addChatMessage("you changed the time to " + content.time);
 }
 
 // TODO: reordering queue will be harder
