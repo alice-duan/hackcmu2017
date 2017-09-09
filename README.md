@@ -17,7 +17,6 @@ Queue structures
   name: String // user facing name
   type: String // "file", "youtube", etc..
   content: { // only "file" type needs this
-    blob: Blob
     confirmed: Number // amount of people that have accepted something on the queue (starts as 0)
   }
 }

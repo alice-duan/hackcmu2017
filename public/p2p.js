@@ -33,15 +33,38 @@ const messageHandler = {
     const skipped = state.queue.pop();
     if (skipped !== undefined) {
       addChatMessage(message.origin + " skipped " + skipped.name);
+
+      if (next.content.confirmed !== Object.keys(state.connections).length - 1) {
+        addChatMessage("Waiting for people to accept...");
+        state.waiting = true;
+      } else {
+        if (state.queue[index].content.type === "audio") {
+          useAudio(state.queue[index]);
+        } else {
+          useVideo(state.queue[index]);
+        }
+      }
+    } else {
+      addChatMessage("No media to skip");
     }
   },
   queueNext(message) {
     // when current media is over
     const next = state.queue.pop();
 
-    if (next.confirmed !== Object.keys(state.connections).length) {
+    if (next !== undefined) {
+      addChatMessage("No media left to play");
+      return;
+    }
+    if (next.content.confirmed !== Object.keys(state.connections).length - 1) {
       addChatMessage("Waiting for people to accept...");
       state.waiting = true;
+    } else {
+      if (state.queue[index].content.type === "audio") {
+        useAudio(state.queue[index]);
+      } else {
+        useVideo(state.queue[index]);
+      }
     }
   },
   queueAdd(message) {
@@ -74,8 +97,47 @@ const messageHandler = {
 
       if (state.queue[index].confirmed === Object.keys(state.connections).length) {
         state.waiting = false;
+
+        if (state.queue[index].content.type === "audio") {
+          useAudio(state.queue[index]);
+        } else {
+          useVideo(state.queue[index]);
+        }
       }
     }
+  },
+  queueStartTransfer(message) {
+    addChatMessage(
+      message.origin + " is transferring " + message.content.name + " to " + message.content.target
+    );
+  },
+  queueEndTransfer(message) {
+    addChatMessage(
+      message.origin +
+        " finished transferring " +
+        message.content.name +
+        " to " +
+        message.content.target
+    );
+  },
+  queueRequest(message) {
+    const index = state.queue.findIndex(elem => elem.name === message.content.name);
+
+    if (state.queue[index]) {
+      console.log("sending");
+      conn.send(message.origin, {
+        type: "queueRequestFulfill",
+        origin: peer.id,
+        content: {
+          data: new Blob([state.queue[index].content.file], { type: state.queue[index].content.filetype }),
+          type: state.queue[index].content.filetype
+        }
+      });
+      console.log("sent file?");
+    }
+  },
+  queueRequestFulfill(message) {
+    //new Blob([message.content.data], { type: message.content.type });
   },
   queueReject(message) {
     addChatMessage(message.origin + " rejected adding " + message.content.name + " to the queue");
@@ -83,10 +145,14 @@ const messageHandler = {
     const index = state.queue.findIndex(elem => elem.name === message.content.name);
     if (state.queue[index]) {
       state.queue.splice(index, 1);
-    }
-    state.waiting = false;
 
-    addChatMessage("Moving on");
+      if (index === 0) {
+        state.waiting = false;
+      } else {
+        addChatMessage("Moving on");
+        messageAllPeers("queueNext");
+      }
+    }
   },
   chatMessage(message) {
     addChatMessage(message.origin + ": " + message.content);
@@ -181,7 +247,7 @@ function addQueue(file, fileType) {
     type: "file",
     content: {
       type: fileType,
-      file: URL.createObjectURL(file),
+      file: file,
       filetype: file.name.split(".")[-1],
       confirmed: 0
     }
@@ -261,13 +327,13 @@ document.addEventListener(
     document.getElementById("video-input").addEventListener("change", function(event) {
       // make sure a file was actually selected
       if (this.files[0]) {
-        addQueue(this.files[0], "video")
+        addQueue(this.files[0], "video");
       }
     });
     document.getElementById("audio-input").addEventListener("change", function(event) {
       // make sure a file was actually selected
       if (this.files[0]) {
-        addQueue(this.files[0], "audio")
+        addQueue(this.files[0], "audio");
       }
     });
   },
@@ -275,7 +341,7 @@ document.addEventListener(
 );
 
 // Replace media player with video
-const useVideo = () => {
+const useVideo = media => {
   const mediaBox = document.getElementById("media");
   mediaBox.innerHTML = "";
 
@@ -287,6 +353,8 @@ const useVideo = () => {
   video.addEventListener("seeked", seek);
   video.addEventListener("ended", ended);
 
+  video.src = URL.createObjectURL(media.file);
+
   mediaBox.appendChild(video);
 
   state.currentMedia = video;
@@ -296,7 +364,7 @@ const useVideo = () => {
 };
 
 // Replace media player with audio
-const useAudio = () => {
+const useAudio = media => {
   const mediaBox = document.getElementById("media");
   mediaBox.innerHTML = "";
 
@@ -307,6 +375,8 @@ const useAudio = () => {
   audio.addEventListener("pause", pause);
   audio.addEventListener("seeked", seek);
   audio.addEventListener("ended", ended);
+
+  audio.src = URL.createObjectURL(media.file);
 
   mediaBox.appendChild(audio);
 
@@ -321,7 +391,7 @@ const addChatMessage = msg => {
   append("chat", msg);
   const objDiv = document.getElementById("chat");
   objDiv.scrollTop = objDiv.scrollHeight;
-}
+};
 
 // add system message to chat box
 const addAdminChat = msg => {
@@ -365,7 +435,7 @@ const append = (id, msg, elem = "p", admin = false) => {
   const element = document.createElement(elem);
   element.textContent = msg;
   if (admin) {
-     element.setAttribute('style', 'color:#0033cc');
+    element.setAttribute("style", "color:#0033cc");
   }
   document.getElementById(id).appendChild(element);
 };
