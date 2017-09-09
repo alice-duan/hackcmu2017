@@ -267,6 +267,7 @@ const addChatMessage = msg => {
   objDiv.scrollTop = objDiv.scrollHeight;
 }
 
+// add system message
 const addAdminChat = msg => {
   append("chat", msg, "p", true);
   var objDiv = document.getElementById("chat");
