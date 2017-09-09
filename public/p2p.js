@@ -121,7 +121,7 @@ function addQueue() {
     name: "hardcode"
   };
   messageAllPeers("queueAdd", content);
-  messageHandler.addQueue({ origin: "you", content });
+  messageHandler.queueAdd({ origin: "you", content });
 }
 
 function removeQueue() {
@@ -129,7 +129,7 @@ function removeQueue() {
     name: "hardcode"
   };
   messageAllPeers("queueRemove", content);
-  messageHandler.removeQueue({ origin: "you", content });
+  messageHandler.queueRemove({ origin: "you", content });
 }
 
 function skip() {
@@ -177,3 +177,8 @@ const append = (id, msg, elem = "p") => {
   element.textContent = msg;
   document.getElementById(id).appendChild(element);
 };
+
+const remove = (id) => {
+  var elem = document.getElementById(id);
+  return elem.parentNode.removeChild(elem);
+}
