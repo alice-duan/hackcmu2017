@@ -57,17 +57,19 @@ function connect() {
 }
 
 function send() {
+  const { value } = document.getElementById("message");
+  addChatMessage("you: " + value);
   connections.forEach(conn => {
-    const { value } = document.getElementById("message");
-
     conn.send({ type: "message", content: value });
-
-    addChatMessage("you: " + value);
   });
 }
 
 // add msg to chat box
-const addChatMessage = msg => append("chat", msg);
+const addChatMessage = msg => {
+  append("chat", msg);
+  var objDiv = document.getElementById("chat");
+  objDiv.scrollTop = objDiv.scrollHeight;
+}
 
 // add peer name to connections list
 const addConnection = name => append("connections-here", name);
