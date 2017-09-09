@@ -6,6 +6,19 @@
   </head>
   <body>
     testing
+
+    <input id="peerId" type="text" placeholder="peer to connect to" />
+    <input type="button" value="submit" onclick="connect();" />
+
+    <br>
+
+    <input id="message" type="text" placeholder="chat message (if connected)" />
+    <input type="button" value="submit" onclick="send();" />
+
+    <div id="chat">
+      chat:
+
+    </div>
     <script src="http://cdn.peerjs.com/0.3/peer.js"></script>
     <script src="p2p.js"></script>
   </body>
