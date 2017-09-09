@@ -79,12 +79,10 @@ function connect() {
 }
 
 function send() {
-  Object.values(state.connections).forEach(conn => {
-    const { value } = document.getElementById("message");
-
+  const { value } = document.getElementById("message");
+  addChatMessage("you: " + value);
+  connections.forEach(conn => {
     conn.send({ type: "message", content: value });
-
-    addChatMessage("you: " + value);
   });
 }
 
@@ -108,7 +106,11 @@ const connectToPeer = (peerId, hitback) => {
 };
 
 // add msg to chat box
-const addChatMessage = msg => append("chat", msg);
+const addChatMessage = msg => {
+  append("chat", msg);
+  var objDiv = document.getElementById("chat");
+  objDiv.scrollTop = objDiv.scrollHeight;
+}
 
 // add peer name to connections list
 const addConnection = name => append("connections-here", name);
