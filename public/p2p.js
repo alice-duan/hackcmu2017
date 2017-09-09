@@ -232,6 +232,9 @@ const useVideo = () => {
   mediaBox.appendChild(video);
 
   state.currentMedia = video;
+
+  document.getElementById('video-input').hidden = true;
+  document.getElementById('video-button').hidden = false;
 };
 
 // Replace media player with audio
@@ -250,6 +253,9 @@ const useAudio = () => {
   mediaBox.appendChild(audio);
 
   state.currentMedia = audio;
+
+  document.getElementById('audio-input').hidden = true;
+  document.getElementById('audio-button').hidden = false;
 };
 
 // add msg to chat box
@@ -299,4 +305,20 @@ const append = (id, msg, elem = "p") => {
 const remove = elem => {
   var elem = document.getElementById(id);
   return elem.parentNode.parentNode.removeChild(elem);
+}
+
+function showAudioBrowser() {
+  document.getElementById('audio-input').hidden = false;
+  document.getElementById('audio-button').hidden = true;
+
+  document.getElementById('video-input').hidden = true;
+  document.getElementById('video-button').hidden = false;
+}
+
+function showVideoBrowser() {
+  document.getElementById('video-input').hidden = false;
+  document.getElementById('video-button').hidden = true;
+
+  document.getElementById('audio-input').hidden = true;
+  document.getElementById('audio-button').hidden = false;
 }
