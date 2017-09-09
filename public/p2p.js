@@ -56,11 +56,13 @@ const messageHandler = {
       state.queue.splice(index, 1);
     }
   },
-  queueReorder(message) {},
   queueReject(message) {},
   chatMessage(message) {
     addChatMessage(message.origin + ": " + message.content);
-  }
+  },
+  play(message) {},
+  pause(message) {},
+  seek(message) {}
 };
 
 peer.on("connection", conn => {
@@ -137,6 +139,36 @@ function skip() {
   messageHandler.skip();
 }
 
+function play() {
+  const content = {
+    currentTime: state.currentMedia.currentTime
+  };
+  messageAllPeers("play", content);
+  messageHandler.play(content);
+}
+
+function pause() {
+  const content = {
+    currentTime: state.currentMedia.currentTime
+  };
+  messageAllPeers("pause", content);
+  messageHandler.pause(content);
+}
+
+function ended() {
+  messageAllPeers("queueNext");
+  messageHandler.queueNext(content);
+}
+
+function seek() {
+  const content = {
+    time: state.currentMedia.currentTime,
+    paused: state.currentMedia.playing
+  };
+  messageAllPeers("seek", content);
+  messageHandler.seek(content);
+}
+
 // TODO: reordering queue will be harder
 
 const messageAllPeers = (type, content) => {
@@ -162,10 +194,67 @@ const connectToPeer = (peerId, hitback) => {
   return true;
 };
 
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+    document.getElementById("video-input").addEventListener("change", function(event) {
+      // make sure a file was actually selected
+      if (this.files[0]) {
+        const src = URL.createObjectURL(this.files[0]);
+        document.getElementById("v").src = src;
+      }
+    });
+    document.getElementById("audio-input").addEventListener("change", function(event) {
+      // make sure a file was actually selected
+      if (this.files[0]) {
+        const src = URL.createObjectURL(this.files[0]);
+        document.getElementById("a").src = src;
+      }
+    });
+  },
+  false
+);
+
+// Replace media player with video
+const useVideo = () => {
+  const mediaBox = document.getElementById("media");
+  mediaBox.innerHTML = "";
+
+  const video = document.createElement("video");
+  video.id = "v";
+  video.controls = true;
+  video.addEventListener("play", play);
+  video.addEventListener("pause", pause);
+  video.addEventListener("seeked", seek);
+  video.addEventListener("ended", ended);
+
+  mediaBox.appendChild(video);
+
+  state.currentMedia = video;
+};
+
+// Replace media player with audio
+const useAudio = () => {
+  const mediaBox = document.getElementById("media");
+  mediaBox.innerHTML = "";
+
+  const audio = document.createElement("audio");
+  audio.id = "a";
+  audio.controls = true;
+  audio.addEventListener("play", play);
+  audio.addEventListener("pause", pause);
+  audio.addEventListener("seeked", seek);
+  audio.addEventListener("ended", ended);
+
+  mediaBox.appendChild(audio);
+
+  state.currentMedia = audio;
+};
+
 // add msg to chat box
 const addChatMessage = msg => {
   append("chat", msg);
-  var objDiv = document.getElementById("chat");
+  const objDiv = document.getElementById("chat");
   objDiv.scrollTop = objDiv.scrollHeight;
 };
 
