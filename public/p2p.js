@@ -46,6 +46,7 @@ const messageHandler = {
     if (message.content.type === "file") {
       // TODO: trigger open file prompt
     }
+    addQueueRow(message.content);
   },
   queueRemove(message) {
     // TODO: maybe allow for race conditions and just send index
@@ -169,6 +170,34 @@ const addChatMessage = msg => {
   objDiv.scrollTop = objDiv.scrollHeight;
 };
 
+const addQueueRow = content => {
+  const row = document.createElement("tr");
+  row.id = content.id;
+
+  const removeButtonCell = document.createElement("td");
+  removeButtonCell.width = "35px"
+  const removeButton = document.createElement("input");
+  removeButton.type = "button"
+  removeButton.className = "btn btn-info"
+  removeButton.value = "Remove"
+  removeButton.onclick = function(event) {
+    const row = event.target.parentNode.parentNode;
+    const table = row.parentNode;
+
+    table.removeChild(row);
+  };
+
+  removeButtonCell.appendChild(removeButton);
+
+  const nameCell = document.createElement("td");
+  nameCell.innerHTML = content.name;
+
+  row.appendChild(nameCell);
+  row.appendChild(removeButtonCell);
+
+  document.getElementById("queue").appendChild(row)
+}
+
 // add peer name to connections list
 const addConnection = name => append("connections-here", name);
 
@@ -178,7 +207,7 @@ const append = (id, msg, elem = "p") => {
   document.getElementById(id).appendChild(element);
 };
 
-const remove = (id) => {
+const remove = elem => {
   var elem = document.getElementById(id);
-  return elem.parentNode.removeChild(elem);
+  return elem.parentNode.parentNode.removeChild(elem);
 }
