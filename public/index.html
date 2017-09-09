@@ -19,25 +19,41 @@
         <div class="card-header">
           Your Connections
         </div>
-        <div id="connections-here" class="card-content" style="padding:10px; overflow-x:scroll; height: 40px; width: 33%;">
+        <div id="connections-here" class="card-content" style="padding:10px; overflow-x:scroll; height: 40px;">
         </div>
       </div>
 
       <div class="form-inline">
         <input id="peerId" type="text" placeholder="Your Friend's Peer ID" style="margin-left: 20px;"/>
-        <input type="button" class="btn btn-info" value="Connect" onclick="connect();" style="margin-left: 20px;"/>
+        <input type="submit" class="btn btn-info" value="Connect" onclick="connect();" style="margin-left: 20px;"/>
       </div>
     </div>
+
     <div class="row">
       <div class="card" style="margin-left: 2rem; margin-top: 10px; width: 33%;">
         <div class="card-header">Chat Room</div>
         <div class="card-content">
-          <div id="chat" style="overflow-x:scroll; height: 400px;" />
+          <div id="chat" style="overflow-x:scroll; height: 200px;"> </div>
         </div>
         <div class="card-footer">
           <input id="message" type="text" placeholder="Message" style="margin-top: 10px; width: 100%"/>
           <br>
           <input type="button" class="btn btn-info" value="Send Message" onclick="sendChatMessage();" style="margin-top: 10px;" />
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card" style="margin-left: 2rem; margin-top: 10px; width: 33%;">
+        <div class="card-header">Media Queue</div>
+        <div class="card-content">
+          <div style="overflow-x:scroll; height: 150px;">
+            <table class="table table-striped" id="queue">
+            </table>
+          </div>
+        </div>
+        <div class="card-footer">
+          <input type="button" class="btn btn-info" value="Add Media" onclick="add();" style="margin-top: 10px;" />
         </div>
       </div>
     </div>
