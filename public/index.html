@@ -38,8 +38,12 @@
         <div class="card-footer">
           <input id="message" type="text" placeholder="Message" style="margin-top: 10px; width: 100%"/>
           <br>
-          <input type="button" class="btn btn-info" value="Send Message" onclick="sendChatMessage();" style="margin-top: 10px;" />
+          <input type="button" class="btn btn-info" value="Send Message" onclick="send();" style="margin-top: 10px;" />
         </div>
+      </div>
+      <input id="video-input" type="file" accept="video/*"/>
+      <input id="audio-input" type="file" accept="audio/*"/>
+      <div id="media">
       </div>
     </div>
 
@@ -48,7 +52,8 @@
         <div class="card-header">Media Queue</div>
         <div class="card-content">
           <div style="overflow-x:scroll; height: 150px;">
-            <table class="table table-striped" id="queue">
+            <table class="table table-striped">
+              <tbody id="queue"></tbody>
             </table>
           </div>
         </div>

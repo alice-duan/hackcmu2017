@@ -19,3 +19,8 @@ Queue structures
   // more ?
 }
 ```
+
+Links: 
+
+<video> and <audio> API, as well as events https://developer.mozilla.org/en-US/docs/Web/Guide/Events/Media_events
+https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement
