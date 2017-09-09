@@ -113,10 +113,9 @@ function connect() {
 // DOM interface
 function sendChatMessage() {
   const { value } = document.getElementById("message");
-<<<<<<< HEAD
-=======
   messageAllPeers("chatMessage", value);
   messageHandler.chatMessage({ origin: "you", content: value });
+  document.getElementById("message").value = "";
 }
 
 function addQueue() {
@@ -138,7 +137,6 @@ function removeQueue() {
 function skip() {
   messageAllPeers("skip");
   messageHandler.skip();
->>>>>>> 9f53552b9c575db0dd35dbf112b7eb73d29587f3
 }
 
 // TODO: reordering queue will be harder
@@ -153,9 +151,9 @@ const connectToPeer = (peerId, hitback) => {
     const conn = peer.connect(peerId);
 
     if (hitback) {
-      addChatMessage(conn.peer + " connected!");
+      addAdminChat(conn.peer + " connected!");
     } else {
-      addChatMessage("Connected to " + peerId + "!"); // TODO: server messages should be different
+      addAdminChat("Connected to " + peerId + "!");
     }
     addConnection(peerId);
 
@@ -168,13 +166,13 @@ const connectToPeer = (peerId, hitback) => {
 
 // add msg to chat box
 const addChatMessage = msg => {
-  append("chat", msg, "span");
+  append("chat", msg);
   var objDiv = document.getElementById("chat");
   objDiv.scrollTop = objDiv.scrollHeight;
 }
 
 const addAdminChat = msg => {
-  append("chat", msg, "span");
+  append("chat", msg, "p", true);
   var objDiv = document.getElementById("chat");
   objDiv.scrollTop = objDiv.scrollHeight;
 };
@@ -182,16 +180,16 @@ const addAdminChat = msg => {
 // add peer name to connections list
 const addConnection = name => append("connections-here", name);
 
-const append = (id, msg, elem = "span") => {
+const append = (id, msg, elem = "p", admin = false) => {
   const element = document.createElement(elem);
   element.textContent = msg;
+  if (admin) {
+     element.setAttribute('style', 'color:#0033cc');
+  }
   document.getElementById(id).appendChild(element);
 };
 
-<<<<<<< HEAD
-=======
 const remove = (id) => {
   var elem = document.getElementById(id);
   return elem.parentNode.removeChild(elem);
 }
->>>>>>> 9f53552b9c575db0dd35dbf112b7eb73d29587f3
