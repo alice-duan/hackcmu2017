@@ -79,7 +79,7 @@ const messageHandler = {
 
     const index = state.queue.findIndex(elem => elem.name === message.content.name);
     if (state.queue[index]) {
-      state.queue.splice(, 1);
+      state.queue.splice(index, 1);
     }
     state.waiting = false;
 
@@ -143,7 +143,13 @@ peer.on("connection", conn => {
 
     console.error("Unknown message type " + message.type, message);
   });
+
+  conn.on("error", err => console.error(err));
 });
+
+peer.on("disconnect", conn => {
+  console.log(conn.peer, "they disconnected?");
+})
 
 // DOM interface
 function connect() {
