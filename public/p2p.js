@@ -5,9 +5,7 @@ var peer = new Peer({ key: "2nnnwv66dinhr529" });
 const state = {
   connections: {},
   queue: [],
-  blobs: {},
-  initialized: false,
-  waiting: false // if we are currently waiting for confirmations to play next thing in queue
+  initialized: false
 };
 console.log("state:", state);
 
@@ -16,6 +14,14 @@ peer.on("open", peerId => {
 
   state.id = peerId;
 });
+
+const playMedia = queueMedia => {
+  if (queueMedia.content.type === "audio") {
+    useAudio(queueMedia);
+  } else {
+    useVideo(queueMedia);
+  }
+};
 
 const messageHandler = {
   init(message) {
@@ -31,54 +37,37 @@ const messageHandler = {
   queueSkip(message) {
     // when someone decides to skip the current
     const skipped = state.queue.pop();
-    if (skipped !== undefined) {
-      addChatMessage(message.origin + " skipped " + skipped.name);
 
-      if (next.content.confirmed !== Object.keys(state.connections).length - 1) {
-        addChatMessage("Waiting for people to accept...");
-        state.waiting = true;
-      } else {
-        if (state.queue[index].content.type === "audio") {
-          useAudio(state.queue[index]);
-        } else {
-          useVideo(state.queue[index]);
-        }
-      }
-    } else {
+    if (skipped === undefined) {
       addChatMessage("No media to skip");
+      return;
     }
+
+    addChatMessage(message.origin + " skipped " + skipped.name);
+    playMedia(skipped);
   },
   queueNext(message) {
     // when current media is over
     const next = state.queue.pop();
 
-    if (next !== undefined) {
+    if (next === undefined) {
       addChatMessage("No media left to play");
       return;
     }
-    if (next.content.confirmed !== Object.keys(state.connections).length - 1) {
-      addChatMessage("Waiting for people to accept...");
-      state.waiting = true;
-    } else {
-      if (state.queue[index].content.type === "audio") {
-        useAudio(state.queue[index]);
-      } else {
-        useVideo(state.queue[index]);
-      }
-    }
+
+    playMedia(next);
   },
   queueAdd(message) {
+    message.content.content.file = new Blob([message.content.content.file], {
+      type: message.content.content.filetype
+    });
     state.queue.push(message.content);
-    addChatMessage(
-      message.origin +
-        " added " +
-        message.content.name +
-        " to the queue. You may accept this if you have the file."
-    );
-    if (message.content.type === "file") {
-      // TODO: document.getElementById("file-response-modal").classList.add("show");
-    }
+    addChatMessage(message.origin + " added " + message.content.name + " to the queue");
     addQueueRow(message.content);
+
+    if (state.queue.length === 1) {
+      playMedia(message.content);
+    }
   },
   queueRemove(message) {
     const index = state.queue.findIndex(elem => elem.name === message.content);
@@ -86,72 +75,6 @@ const messageHandler = {
     if (state.queue[index]) {
       addChatMessage(message.content + " removed " + state.queue[index].name + " from the queue");
       state.queue.splice(index, 1);
-    }
-  },
-  queueAccept(message) {
-    addChatMessage(message.origin + " accepted adding " + message.content.name + " to the queue");
-
-    const index = state.queue.findIndex(elem => elem.name === message.content.name);
-    if (state.queue[index]) {
-      state.queue[index].confirmed += 1;
-
-      if (state.queue[index].confirmed === Object.keys(state.connections).length) {
-        state.waiting = false;
-
-        if (state.queue[index].content.type === "audio") {
-          useAudio(state.queue[index]);
-        } else {
-          useVideo(state.queue[index]);
-        }
-      }
-    }
-  },
-  queueStartTransfer(message) {
-    addChatMessage(
-      message.origin + " is transferring " + message.content.name + " to " + message.content.target
-    );
-  },
-  queueEndTransfer(message) {
-    addChatMessage(
-      message.origin +
-        " finished transferring " +
-        message.content.name +
-        " to " +
-        message.content.target
-    );
-  },
-  queueRequest(message) {
-    const index = state.queue.findIndex(elem => elem.name === message.content.name);
-
-    if (state.queue[index]) {
-      console.log("sending");
-      conn.send(message.origin, {
-        type: "queueRequestFulfill",
-        origin: peer.id,
-        content: {
-          data: new Blob([state.queue[index].content.file], { type: state.queue[index].content.filetype }),
-          type: state.queue[index].content.filetype
-        }
-      });
-      console.log("sent file?");
-    }
-  },
-  queueRequestFulfill(message) {
-    //new Blob([message.content.data], { type: message.content.type });
-  },
-  queueReject(message) {
-    addChatMessage(message.origin + " rejected adding " + message.content.name + " to the queue");
-
-    const index = state.queue.findIndex(elem => elem.name === message.content.name);
-    if (state.queue[index]) {
-      state.queue.splice(index, 1);
-
-      if (index === 0) {
-        state.waiting = false;
-      } else {
-        addChatMessage("Moving on");
-        messageAllPeers("queueNext");
-      }
     }
   },
   chatMessage(message) {
@@ -243,12 +166,12 @@ function sendChatMessage() {
 function addQueue(file, fileType) {
   const content = {
     id: Date.now(),
-    name: file.name.split(".")[0],
+    name: file.name,
     type: "file",
     content: {
       type: fileType,
-      file: file,
-      filetype: file.name.split(".")[-1],
+      file: new Blob([file], { type: file.type }),
+      filetype: file.type,
       confirmed: 0
     }
   };
@@ -376,7 +299,7 @@ const useAudio = media => {
   audio.addEventListener("seeked", seek);
   audio.addEventListener("ended", ended);
 
-  audio.src = URL.createObjectURL(media.file);
+  audio.src = URL.createObjectURL(media.content.file);
 
   mediaBox.appendChild(audio);
 
