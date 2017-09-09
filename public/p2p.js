@@ -4,26 +4,41 @@ var peer = new Peer({ key: "2nnnwv66dinhr529" });
 
 console.log("peer data", peer);
 
-let id;
+const state = {};
+
 peer.on("open", peerId => {
   console.log("My peer ID is: " + peerId);
   document.getElementById("id-here").innerHTML = peerId;
 
-  id = peerId;
+  state.id = peerId;
 });
 
-const connections = [];
+state.connections = {};
+state.queue = [];
+console.log("state, look back later", state);
 
 // TODO: disconnect!?
+
+state.initialized = false;
 
 peer.on("connection", conn => {
   console.log("got connection: from " + conn.peer, conn);
 
-  // connect back if not already connected
-  if (!connections.find(c => c.peer === conn.peer)) {
-    connections.push(peer.connect(conn.peer));
-    addChatMessage(conn.peer + " connected!");
-    console.log("Connected back to " + conn.peer);
+  // connect back if needed
+  const alreadyConnected = connectToPeer(conn.peer, true);
+
+  // initialize new friends
+  if (!alreadyConnected) {
+    // TODO: setting metadata for initialization
+    setTimeout(() => {
+      console.log("delayed send... not sure why but this is necessary");
+      state.connections[conn.peer].send({
+        type: "init",
+        content: {
+          connections: Object.keys(state.connections)
+        }
+      });
+    }, 500);
   }
 
   // Receive messages
@@ -31,33 +46,38 @@ peer.on("connection", conn => {
     console.log("Received", data);
 
     switch (data.type) {
+      case "init":
+        // in case user tries to manually connect to everyone
+        if (!state.initialized) {
+          // try to connect to all existing connections
+          data.content.connections
+            .filter(peerId => peerId !== state.id)
+            .forEach(peerId => connectToPeer(peerId));
+          state.initialized = true;
+        }
+        break;
+      case "queue-add":
+        break;
+      case "queue-remove":
+        break;
+      case "queue-reorder":
+        break;
       default:
         addChatMessage(conn.peer + ": " + data.content);
         break;
     }
   });
-
-  // Send messages
-  //conn.send("Hello!");
 });
 
-//connects to peer, updates connections displayed, and
-//connects to all of the peer's connections
+// DOM interface
 function connect() {
   const peerId = document.getElementById("peerId").value;
 
-  console.log("trying to connect to", peerId);
-  const conn = peer.connect(peerId);
-  console.log("connection:", conn);
-
-  addChatMessage("Connected to " + conn.peer + "!"); // TODO: server messages should be different
-  addConnection(conn.peer);
-
-  connections.push(conn);
+  connectToPeer(peerId);
 }
 
 function send() {
-  connections.forEach(conn => {
+  Object.values(state.connections).forEach(conn => {
     const { value } = document.getElementById("message");
 
     conn.send({ type: "message", content: value });
@@ -65,6 +85,25 @@ function send() {
     addChatMessage("you: " + value);
   });
 }
+
+// Returns whether peer already existed
+const connectToPeer = (peerId, hitback) => {
+  if (state.connections[peerId] === undefined) {
+    const conn = peer.connect(peerId);
+
+    if (hitback) {
+      addChatMessage(conn.peer + " connected!");
+    } else {
+      addChatMessage("Connected to " + peerId + "!"); // TODO: server messages should be different
+    }
+    addConnection(peerId);
+
+    state.connections[peerId] = conn;
+
+    return false;
+  }
+  return true;
+};
 
 // add msg to chat box
 const addChatMessage = msg => append("chat", msg);
@@ -77,7 +116,3 @@ const append = (id, msg, elem = "p") => {
   element.textContent = msg;
   document.getElementById(id).appendChild(element);
 };
-
-setInterval(() => {
-  console.log("Current connections:", connections.slice(0));
-}, 5000);
