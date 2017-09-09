@@ -56,12 +56,15 @@ const messageHandler = {
     addQueueRow(message.content);
   },
   queueRemove(message) {
-    const index = state.queue.findIndex(elem => elem.name === message.content);
+    const index = state.queue.findIndex(elem => elem.name === message.content.name);
 
     if (state.queue[index]) {
       addChatMessage(message.content + " removed " + state.queue[index].name + " from the queue");
       state.queue.splice(index, 1);
     }
+
+    const row = document.getElementById(message.content.id);
+    row.parentNode.removeChild(row)
   },
   queueAccept(message) {
     addChatMessage(message.origin + " accepted adding " + message.content.name + " to the queue");
@@ -184,10 +187,11 @@ function addQueue(file, fileType) {
   messageHandler.queueAdd({ origin: "you", content });
 }
 
-function removeQueue() {
+function removeQueue(event) {
   const content = {
-    name: "hardcode"
-  };
+    name: event.target.parentNode.childNodes[0].innerHTML,
+    id: event.target.parentNode.parentNode.id
+  }
   messageAllPeers("queueRemove", content);
   messageHandler.queueRemove({ origin: "you", content });
 }
@@ -246,7 +250,7 @@ const connectToPeer = (peerId, hitback) => {
 
     state.connections[peerId] = conn;
 
-    return false;
+    return false
   }
   return true;
 };
@@ -337,10 +341,7 @@ const addQueueRow = content => {
   removeButton.className = "btn btn-info"
   removeButton.value = "Remove"
   removeButton.onclick = function(event) {
-    const row = event.target.parentNode.parentNode;
-    const table = row.parentNode;
-
-    table.removeChild(row);
+    removeQueue(event);
   };
 
   removeButtonCell.appendChild(removeButton);
@@ -365,11 +366,6 @@ const append = (id, msg, elem = "p", admin = false) => {
   }
   document.getElementById(id).appendChild(element);
 };
-
-const remove = elem => {
-  var elem = document.getElementById(id);
-  return elem.parentNode.parentNode.removeChild(elem);
-}
 
 function showAudioBrowser() {
   document.getElementById('audio-input').hidden = false;
