@@ -76,12 +76,14 @@ function connect() {
   const peerId = document.getElementById("peerId").value;
 
   connectToPeer(peerId);
+  document.getElementById("peerId").value = "";
 }
 
 function send() {
   const { value } = document.getElementById("message");
   Object.values(state.connections).forEach(c => c.send({ type: "message", content: value }));
   addChatMessage("you: " + value);
+  document.getElementById("message").value = "";
 }
 
 // Returns whether peer already existed
@@ -105,7 +107,13 @@ const connectToPeer = (peerId, hitback) => {
 
 // add msg to chat box
 const addChatMessage = msg => {
-  append("chat", msg);
+  append("chat", msg, "span");
+  var objDiv = document.getElementById("chat");
+  objDiv.scrollTop = objDiv.scrollHeight;
+}
+
+const addAdminChat = msg => {
+  append("chat", msg, "span");
   var objDiv = document.getElementById("chat");
   objDiv.scrollTop = objDiv.scrollHeight;
 }
@@ -113,8 +121,9 @@ const addChatMessage = msg => {
 // add peer name to connections list
 const addConnection = name => append("connections-here", name);
 
-const append = (id, msg, elem = "p") => {
+const append = (id, msg, elem = "span") => {
   const element = document.createElement(elem);
   element.textContent = msg;
   document.getElementById(id).appendChild(element);
 };
+
