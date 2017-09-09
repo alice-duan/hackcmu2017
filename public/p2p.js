@@ -5,19 +5,17 @@ var peer = new Peer({ key: "2nnnwv66dinhr529" });
 const state = {
   connections: {},
   queue: [],
+  blobs: {},
   initialized: false,
-  waiting: false, // if we are currently waiting for confirmations to play next thing in queue
+  waiting: false // if we are currently waiting for confirmations to play next thing in queue
 };
 console.log("state:", state);
 
 peer.on("open", peerId => {
-  console.log("My peer ID is: " + peerId);
   document.getElementById("id-here").innerHTML = peerId;
 
   state.id = peerId;
 });
-
-// TODO: disconnect!?
 
 const messageHandler = {
   init(message) {
@@ -48,8 +46,12 @@ const messageHandler = {
   },
   queueAdd(message) {
     state.queue.push(message.content);
-    console.log(state.queue)
-    addChatMessage(message.origin + " added " + message.content.name + " to the queue. You may accept this if you have the file.");
+    addChatMessage(
+      message.origin +
+        " added " +
+        message.content.name +
+        " to the queue. You may accept this if you have the file."
+    );
     if (message.content.type === "file") {
       // TODO: document.getElementById("file-response-modal").classList.add("show");
     }
@@ -145,12 +147,16 @@ peer.on("connection", conn => {
     console.error("Unknown message type " + message.type, message);
   });
 
+  conn.on("close", () => {
+    addChatMessage(conn.peer + " disconnected");
+
+    delete state.connections[conn.peer];
+  });
+
   conn.on("error", err => console.error(err));
 });
 
-peer.on("disconnect", conn => {
-  console.log(conn.peer, "they disconnected?");
-})
+peer.on("error", error => console.error(error));
 
 // DOM interface
 function connect() {
@@ -220,13 +226,11 @@ function ended() {
 
 function seek() {
   const content = {
-    time: state.currentMedia.currentTime,
+    time: state.currentMedia.currentTime
   };
   messageAllPeers("seek", content);
   addChatMessage("you changed the time to " + content.time);
 }
-
-// TODO: reordering queue will be harder
 
 const messageAllPeers = (type, content) => {
   Object.values(state.connections).forEach(c => c.send({ type, origin: state.id, content }));
@@ -238,9 +242,9 @@ const connectToPeer = (peerId, hitback) => {
     const conn = peer.connect(peerId);
 
     if (hitback) {
-      addAdminChat(conn.peer + " connected!");
+      addAdminChat(conn.peer + " connected");
     } else {
-      addAdminChat("Connected to " + peerId + "!");
+      addAdminChat("Connected to " + peerId);
     }
     addConnection(peerId);
 
@@ -287,8 +291,8 @@ const useVideo = () => {
 
   state.currentMedia = video;
 
-  document.getElementById('video-input').hidden = true;
-  document.getElementById('video-button').hidden = false;
+  document.getElementById("video-input").hidden = true;
+  document.getElementById("video-button").hidden = false;
 };
 
 // Replace media player with audio
@@ -308,8 +312,8 @@ const useAudio = () => {
 
   state.currentMedia = audio;
 
-  document.getElementById('audio-input').hidden = true;
-  document.getElementById('audio-button').hidden = false;
+  document.getElementById("audio-input").hidden = true;
+  document.getElementById("audio-button").hidden = false;
 };
 
 // add msg to chat box
@@ -331,11 +335,11 @@ const addQueueRow = content => {
   row.id = content.id;
 
   const removeButtonCell = document.createElement("td");
-  removeButtonCell.width = "35px"
+  removeButtonCell.width = "35px";
   const removeButton = document.createElement("input");
-  removeButton.type = "button"
-  removeButton.className = "btn btn-info"
-  removeButton.value = "Remove"
+  removeButton.type = "button";
+  removeButton.className = "btn btn-info";
+  removeButton.value = "Remove";
   removeButton.onclick = function(event) {
     const row = event.target.parentNode.parentNode;
     const table = row.parentNode;
@@ -351,8 +355,8 @@ const addQueueRow = content => {
   row.appendChild(nameCell);
   row.appendChild(removeButtonCell);
 
-  document.getElementById("queue").appendChild(row)
-}
+  document.getElementById("queue").appendChild(row);
+};
 
 // add peer name to connections list
 const addConnection = name => append("connections-here", name);
@@ -369,20 +373,20 @@ const append = (id, msg, elem = "p", admin = false) => {
 const remove = elem => {
   var elem = document.getElementById(id);
   return elem.parentNode.parentNode.removeChild(elem);
-}
+};
 
 function showAudioBrowser() {
-  document.getElementById('audio-input').hidden = false;
-  document.getElementById('audio-button').hidden = true;
+  document.getElementById("audio-input").hidden = false;
+  document.getElementById("audio-button").hidden = true;
 
-  document.getElementById('video-input').hidden = true;
-  document.getElementById('video-button').hidden = false;
+  document.getElementById("video-input").hidden = true;
+  document.getElementById("video-button").hidden = false;
 }
 
 function showVideoBrowser() {
-  document.getElementById('video-input').hidden = false;
-  document.getElementById('video-button').hidden = true;
+  document.getElementById("video-input").hidden = false;
+  document.getElementById("video-button").hidden = true;
 
-  document.getElementById('audio-input').hidden = true;
-  document.getElementById('audio-button').hidden = false;
+  document.getElementById("audio-input").hidden = true;
+  document.getElementById("audio-button").hidden = false;
 }
