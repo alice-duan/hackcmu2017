@@ -1,3 +1,5 @@
 "use strict";
 
-console.log("script loads lol");
+var peer = new Peer({ key: "2nnnwv66dinhr529" });
+
+console.log("peer data", peer);

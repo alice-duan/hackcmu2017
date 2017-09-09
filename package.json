@@ -4,8 +4,7 @@
   "description": "mediasync",
   "main": "index.js",
   "dependencies": {
-    "express": "^4.15.4",
-    "peerjs": "^0.3.14"
+    "express": "^4.15.4"
   },
   "devDependencies": {},
   "scripts": {
