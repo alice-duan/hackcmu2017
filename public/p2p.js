@@ -280,7 +280,7 @@ const useVideo = media => {
   video.addEventListener("seeked", seek);
   video.addEventListener("ended", ended);
 
-  video.src = URL.createObjectURL(media.file);
+  video.src = URL.createObjectURL(media.content.file);
 
   mediaBox.appendChild(video);
 
