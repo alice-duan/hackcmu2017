@@ -157,6 +157,7 @@ function connect() {
   const peerId = document.getElementById("peerId").value;
 
   connectToPeer(peerId);
+  document.getElementById("peerId").value = "";
 }
 
 // DOM interface
@@ -164,6 +165,7 @@ function sendChatMessage() {
   const { value } = document.getElementById("message");
   messageAllPeers("chatMessage", value);
   messageHandler.chatMessage({ origin: "you", content: value });
+  document.getElementById("message").value = "";
 }
 
 function addQueue(file, fileType) {
@@ -236,9 +238,9 @@ const connectToPeer = (peerId, hitback) => {
     const conn = peer.connect(peerId);
 
     if (hitback) {
-      addChatMessage(conn.peer + " connected!");
+      addAdminChat(conn.peer + " connected!");
     } else {
-      addChatMessage("Connected to " + peerId + "!"); // TODO: server messages should be different
+      addAdminChat("Connected to " + peerId + "!");
     }
     addConnection(peerId);
 
@@ -315,6 +317,13 @@ const addChatMessage = msg => {
   append("chat", msg);
   const objDiv = document.getElementById("chat");
   objDiv.scrollTop = objDiv.scrollHeight;
+}
+
+// add system message to chat box
+const addAdminChat = msg => {
+  append("chat", msg, "p", true);
+  var objDiv = document.getElementById("chat");
+  objDiv.scrollTop = objDiv.scrollHeight;
 };
 
 const addQueueRow = content => {
@@ -348,9 +357,12 @@ const addQueueRow = content => {
 // add peer name to connections list
 const addConnection = name => append("connections-here", name);
 
-const append = (id, msg, elem = "p") => {
+const append = (id, msg, elem = "p", admin = false) => {
   const element = document.createElement(elem);
   element.textContent = msg;
+  if (admin) {
+     element.setAttribute('style', 'color:#0033cc');
+  }
   document.getElementById(id).appendChild(element);
 };
 
