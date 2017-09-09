@@ -48,6 +48,7 @@ const messageHandler = {
   },
   queueAdd(message) {
     state.queue.push(message.content);
+    console.log(state.queue)
     addChatMessage(message.origin + " added " + message.content.name + " to the queue. You may accept this if you have the file.");
     if (message.content.type === "file") {
       // TODO: document.getElementById("file-response-modal").classList.add("show");
@@ -165,9 +166,17 @@ function sendChatMessage() {
   messageHandler.chatMessage({ origin: "you", content: value });
 }
 
-function addQueue() {
+function addQueue(file, fileType) {
   const content = {
-    name: "hardcode"
+    id: Date.now(),
+    name: file.name.split(".")[0],
+    type: "file",
+    content: {
+      type: fileType,
+      file: URL.createObjectURL(file),
+      filetype: file.name.split(".")[-1],
+      confirmed: 0
+    }
   };
   messageAllPeers("queueAdd", content);
   messageHandler.queueAdd({ origin: "you", content });
@@ -246,15 +255,13 @@ document.addEventListener(
     document.getElementById("video-input").addEventListener("change", function(event) {
       // make sure a file was actually selected
       if (this.files[0]) {
-        const src = URL.createObjectURL(this.files[0]);
-        document.getElementById("v").src = src;
+        addQueue(this.files[0], "video")
       }
     });
     document.getElementById("audio-input").addEventListener("change", function(event) {
       // make sure a file was actually selected
       if (this.files[0]) {
-        const src = URL.createObjectURL(this.files[0]);
-        document.getElementById("a").src = src;
+        addQueue(this.files[0], "audio")
       }
     });
   },
