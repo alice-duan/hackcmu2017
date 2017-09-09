@@ -16,7 +16,7 @@ Queue structures
   id: String // unique id
   name: String // user facing name
   type: String // "file", "youtube", etc..
-  // more ?
+  confirmed: Number // amount of people that have accepted something on the queue (starts as 0)
 }
 ```
 
