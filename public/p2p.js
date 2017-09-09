@@ -62,9 +62,11 @@ peer.on("connection", conn => {
         break;
       case "queue-reorder":
         break;
-      default:
+      case "message":
         addChatMessage(conn.peer + ": " + data.content);
         break;
+      default:
+        console.error("Unknown data type " + data.type);
     }
   });
 });
