@@ -5,19 +5,23 @@ var peer = new Peer({ key: "2nnnwv66dinhr529" });
 const state = {
   connections: {},
   queue: [],
-  initialized: false,
-  waiting: false, // if we are currently waiting for confirmations to play next thing in queue
+  initialized: false
 };
 console.log("state:", state);
 
 peer.on("open", peerId => {
-  console.log("My peer ID is: " + peerId);
   document.getElementById("id-here").innerHTML = peerId;
 
   state.id = peerId;
 });
 
-// TODO: disconnect!?
+const playMedia = queueMedia => {
+  if (queueMedia.content.type === "audio") {
+    useAudio(queueMedia);
+  } else {
+    useVideo(queueMedia);
+  }
+};
 
 const messageHandler = {
   init(message) {
@@ -33,27 +37,37 @@ const messageHandler = {
   queueSkip(message) {
     // when someone decides to skip the current
     const skipped = state.queue.pop();
-    if (skipped !== undefined) {
-      addChatMessage(message.origin + " skipped " + skipped.name);
+
+    if (skipped === undefined) {
+      addChatMessage("No media to skip");
+      return;
     }
+
+    addChatMessage(message.origin + " skipped " + skipped.name);
+    playMedia(skipped);
   },
   queueNext(message) {
     // when current media is over
     const next = state.queue.pop();
 
-    if (next.confirmed !== Object.keys(state.connections).length) {
-      addChatMessage("Waiting for people to accept...");
-      state.waiting = true;
+    if (next === undefined) {
+      addChatMessage("No media left to play");
+      return;
     }
+
+    playMedia(next);
   },
   queueAdd(message) {
+    message.content.content.file = new Blob([message.content.content.file], {
+      type: message.content.content.filetype
+    });
     state.queue.push(message.content);
-    console.log(state.queue)
-    addChatMessage(message.origin + " added " + message.content.name + " to the queue. You may accept this if you have the file.");
-    if (message.content.type === "file") {
-      // TODO: document.getElementById("file-response-modal").classList.add("show");
-    }
+    addChatMessage(message.origin + " added " + message.content.name + " to the queue");
     addQueueRow(message.content);
+
+    if (state.queue.length === 1) {
+      playMedia(message.content);
+    }
   },
   queueRemove(message) {
     const index = state.queue.findIndex(elem => elem.name === message.content.name);
@@ -65,29 +79,6 @@ const messageHandler = {
 
     const row = document.getElementById(message.content.id);
     row.parentNode.removeChild(row)
-  },
-  queueAccept(message) {
-    addChatMessage(message.origin + " accepted adding " + message.content.name + " to the queue");
-
-    const index = state.queue.findIndex(elem => elem.name === message.content.name);
-    if (state.queue[index]) {
-      state.queue[index].confirmed += 1;
-
-      if (state.queue[index].confirmed === Object.keys(state.connections).length) {
-        state.waiting = false;
-      }
-    }
-  },
-  queueReject(message) {
-    addChatMessage(message.origin + " rejected adding " + message.content.name + " to the queue");
-
-    const index = state.queue.findIndex(elem => elem.name === message.content.name);
-    if (state.queue[index]) {
-      state.queue.splice(index, 1);
-    }
-    state.waiting = false;
-
-    addChatMessage("Moving on");
   },
   chatMessage(message) {
     addChatMessage(message.origin + ": " + message.content);
@@ -148,12 +139,16 @@ peer.on("connection", conn => {
     console.error("Unknown message type " + message.type, message);
   });
 
+  conn.on("close", () => {
+    addChatMessage(conn.peer + " disconnected");
+
+    delete state.connections[conn.peer];
+  });
+
   conn.on("error", err => console.error(err));
 });
 
-peer.on("disconnect", conn => {
-  console.log(conn.peer, "they disconnected?");
-})
+peer.on("error", error => console.error(error));
 
 // DOM interface
 function connect() {
@@ -174,12 +169,12 @@ function sendChatMessage() {
 function addQueue(file, fileType) {
   const content = {
     id: Date.now(),
-    name: file.name.split(".")[0],
+    name: file.name,
     type: "file",
     content: {
       type: fileType,
-      file: URL.createObjectURL(file),
-      filetype: file.name.split(".")[-1],
+      file: new Blob([file], { type: file.type }),
+      filetype: file.type,
       confirmed: 0
     }
   };
@@ -224,13 +219,11 @@ function ended() {
 
 function seek() {
   const content = {
-    time: state.currentMedia.currentTime,
+    time: state.currentMedia.currentTime
   };
   messageAllPeers("seek", content);
   addChatMessage("you changed the time to " + content.time);
 }
-
-// TODO: reordering queue will be harder
 
 const messageAllPeers = (type, content) => {
   Object.values(state.connections).forEach(c => c.send({ type, origin: state.id, content }));
@@ -242,9 +235,9 @@ const connectToPeer = (peerId, hitback) => {
     const conn = peer.connect(peerId);
 
     if (hitback) {
-      addAdminChat(conn.peer + " connected!");
+      addAdminChat(conn.peer + " connected");
     } else {
-      addAdminChat("Connected to " + peerId + "!");
+      addAdminChat("Connected to " + peerId);
     }
     addConnection(peerId);
 
@@ -261,13 +254,13 @@ document.addEventListener(
     document.getElementById("video-input").addEventListener("change", function(event) {
       // make sure a file was actually selected
       if (this.files[0]) {
-        addQueue(this.files[0], "video")
+        addQueue(this.files[0], "video");
       }
     });
     document.getElementById("audio-input").addEventListener("change", function(event) {
       // make sure a file was actually selected
       if (this.files[0]) {
-        addQueue(this.files[0], "audio")
+        addQueue(this.files[0], "audio");
       }
     });
   },
@@ -275,7 +268,7 @@ document.addEventListener(
 );
 
 // Replace media player with video
-const useVideo = () => {
+const useVideo = media => {
   const mediaBox = document.getElementById("media");
   mediaBox.innerHTML = "";
 
@@ -287,16 +280,18 @@ const useVideo = () => {
   video.addEventListener("seeked", seek);
   video.addEventListener("ended", ended);
 
+  video.src = URL.createObjectURL(media.file);
+
   mediaBox.appendChild(video);
 
   state.currentMedia = video;
 
-  document.getElementById('video-input').hidden = true;
-  document.getElementById('video-button').hidden = false;
+  document.getElementById("video-input").hidden = true;
+  document.getElementById("video-button").hidden = false;
 };
 
 // Replace media player with audio
-const useAudio = () => {
+const useAudio = media => {
   const mediaBox = document.getElementById("media");
   mediaBox.innerHTML = "";
 
@@ -308,12 +303,14 @@ const useAudio = () => {
   audio.addEventListener("seeked", seek);
   audio.addEventListener("ended", ended);
 
+  audio.src = URL.createObjectURL(media.content.file);
+
   mediaBox.appendChild(audio);
 
   state.currentMedia = audio;
 
-  document.getElementById('audio-input').hidden = true;
-  document.getElementById('audio-button').hidden = false;
+  document.getElementById("audio-input").hidden = true;
+  document.getElementById("audio-button").hidden = false;
 };
 
 // add msg to chat box
@@ -321,7 +318,7 @@ const addChatMessage = msg => {
   append("chat", msg);
   const objDiv = document.getElementById("chat");
   objDiv.scrollTop = objDiv.scrollHeight;
-}
+};
 
 // add system message to chat box
 const addAdminChat = msg => {
@@ -335,11 +332,11 @@ const addQueueRow = content => {
   row.id = content.id;
 
   const removeButtonCell = document.createElement("td");
-  removeButtonCell.width = "35px"
+  removeButtonCell.width = "35px";
   const removeButton = document.createElement("input");
-  removeButton.type = "button"
-  removeButton.className = "btn btn-info"
-  removeButton.value = "Remove"
+  removeButton.type = "button";
+  removeButton.className = "btn btn-info";
+  removeButton.value = "Remove";
   removeButton.onclick = function(event) {
     removeQueue(event);
   };
@@ -352,8 +349,8 @@ const addQueueRow = content => {
   row.appendChild(nameCell);
   row.appendChild(removeButtonCell);
 
-  document.getElementById("queue").appendChild(row)
-}
+  document.getElementById("queue").appendChild(row);
+};
 
 // add peer name to connections list
 const addConnection = name => append("connections-here", name);
@@ -362,23 +359,23 @@ const append = (id, msg, elem = "p", admin = false) => {
   const element = document.createElement(elem);
   element.textContent = msg;
   if (admin) {
-     element.setAttribute('style', 'color:#0033cc');
+    element.setAttribute("style", "color:#0033cc");
   }
   document.getElementById(id).appendChild(element);
 };
 
 function showAudioBrowser() {
-  document.getElementById('audio-input').hidden = false;
-  document.getElementById('audio-button').hidden = true;
+  document.getElementById("audio-input").hidden = false;
+  document.getElementById("audio-button").hidden = true;
 
-  document.getElementById('video-input').hidden = true;
-  document.getElementById('video-button').hidden = false;
+  document.getElementById("video-input").hidden = true;
+  document.getElementById("video-button").hidden = false;
 }
 
 function showVideoBrowser() {
-  document.getElementById('video-input').hidden = false;
-  document.getElementById('video-button').hidden = true;
+  document.getElementById("video-input").hidden = false;
+  document.getElementById("video-button").hidden = true;
 
-  document.getElementById('audio-input').hidden = true;
-  document.getElementById('audio-button').hidden = false;
+  document.getElementById("audio-input").hidden = true;
+  document.getElementById("audio-button").hidden = false;
 }
